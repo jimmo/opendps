@@ -68,7 +68,7 @@ ui_number_t cv_voltage = {
         .type = ui_item_number,
         .id = 10,
         .x = 120,
-        .y = 15,
+        .y = 2,
         .can_focus = true,
     },
     .font_size = FONT_METER_LARGE, /** The bigger one, try FONT_SMALL or FONT_MEDIUM for kicks */
@@ -91,7 +91,7 @@ ui_number_t cv_current = {
         .type = ui_item_number,
         .id = 11,
         .x = 120,
-        .y = 60,
+        .y = 37,
         .can_focus = true,
     },
     .font_size = FONT_METER_LARGE,
@@ -102,10 +102,33 @@ ui_number_t cv_current = {
     .min = 0,
     .max = CONFIG_DPS_MAX_CURRENT,
     .si_prefix = si_milli,
-    .num_digits = 1,
-    .num_decimals = 3,
+    .num_digits = 2,
+    .num_decimals = 2,
     .unit = unit_ampere,
     .changed = &current_changed,
+};
+
+/* This is the definition of the current item in the UI */
+ui_number_t cv_power = {
+    {
+        .type = ui_item_number,
+        .id = 12,
+        .x = 120,
+        .y = 72,
+        .can_focus = false,
+    },
+    .font_size = FONT_METER_LARGE,
+    .alignment = ui_text_right_aligned,
+    .pad_dot = false,
+    .color = COLOR_POWER,
+    .value = 0,
+    .min = 0,
+    .max = 0,
+    .si_prefix = si_milli,
+    .num_digits = 2,
+    .num_decimals = 2,
+    .unit = unit_watt,
+    .changed = NULL,
 };
 
 /* This is the screen definition */
@@ -140,7 +163,7 @@ ui_screen_t cv_screen = {
             .name = {'\0'} /** Terminator */
         },
     },
-    .items = { (ui_item_t*) &cv_voltage, (ui_item_t*) &cv_current }
+    .items = { (ui_item_t*) &cv_voltage, (ui_item_t*) &cv_current, (ui_item_t*) &cv_power }
 };
 
 /**
@@ -222,6 +245,8 @@ static void cv_enable(bool enabled)
         cv_voltage.ui.draw(&cv_voltage.ui);
         cv_current.value = saved_i;
         cv_current.ui.draw(&cv_current.ui);
+        cv_power.value = saved_u * saved_i / 1000;
+        cv_power.ui.draw(&cv_power.ui);
     }
 }
 
@@ -299,6 +324,9 @@ static void cv_tick(void)
       * Add 0.5f to ensure correct rounding when truncated */
     cv_voltage.max = (float) pwrctl_calc_vin(v_in_raw) / VIN_VOUT_RATIO + 0.5f;
     if (pwrctl_vout_enabled()) {
+        int32_t new_u = pwrctl_calc_vout(v_out_raw);
+        int32_t new_i = pwrctl_calc_iout(i_out_raw);
+
         if (cv_voltage.ui.has_focus) {
             /** If the voltage setting has focus, make sure we're displaying
               * the desired setting and not the current output value. */
@@ -308,7 +336,6 @@ static void cv_tick(void)
             }
         } else {
             /** No focus, update display if necessary */
-            int32_t new_u = pwrctl_calc_vout(v_out_raw);
             if (new_u != cv_voltage.value) {
                 cv_voltage.value = new_u;
                 cv_voltage.ui.draw(&cv_voltage.ui);
@@ -324,12 +351,14 @@ static void cv_tick(void)
             }
         } else {
             /** No focus, update display if necessary */
-            int32_t new_i = pwrctl_calc_iout(i_out_raw);
             if (new_i != cv_current.value) {
                 cv_current.value = new_i;
                 cv_current.ui.draw(&cv_current.ui);
             }
         }
+
+        cv_power.value = new_u * new_i / 1000;
+        cv_power.ui.draw(&cv_power.ui);
     }
 }
 
@@ -342,15 +371,14 @@ void func_cv_init(uui_t *ui)
 {
     cv_voltage.value = 0; /** read from past */
     cv_current.value = 0; /** read from past */
+    cv_power.value = 0;
     uint16_t i_out_raw, v_in_raw, v_out_raw;
     hw_get_adc_values(&i_out_raw, &v_in_raw, &v_out_raw);
     (void) i_out_raw;
     (void) v_out_raw;
     cv_voltage.max = pwrctl_calc_vin(v_in_raw); /** @todo: subtract for LDO */
     number_init(&cv_voltage); /** @todo: add guards for missing init calls */
-    /** Start at the second most significant digit preventing the user from
-        accidentally cranking up the setting 10V or more */
-    cv_voltage.cur_digit = 2;
     number_init(&cv_current);
+    number_init(&cv_power);
     uui_add_screen(ui, &cv_screen);
 }

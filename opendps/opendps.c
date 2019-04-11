@@ -417,18 +417,18 @@ static void main_ui_tick(void)
 static void ui_init(void)
 {
     bg_color = BLACK;
-    ui_width = TFT_WIDTH;
-    ui_height = TFT_HEIGHT;
+    ui_width = TFT_WIDTH - 3;
+    ui_height = TFT_HEIGHT - 3;
 
     /** Initialise the function screens */
     uui_init(&func_ui, &g_past);
+#ifdef CONFIG_MERGED_ENABLE
+    func_merged_init(&func_ui);
+#endif // CONFIG_MERGED_ENABLE
     func_cv_init(&func_ui);
 #ifdef CONFIG_CC_ENABLE
     func_cc_init(&func_ui);
 #endif // CONFIG_CC_ENABLE
-#ifdef CONFIG_MERGED_ENABLE
-    func_merged_init(&func_ui);
-#endif // CONFIG_MERGED_ENABLE
 
     /** Initialise the settings screens */
     uui_init(&settings_ui, &g_past);
@@ -710,8 +710,16 @@ void opendps_update_power_status(bool enabled)
         is_enabled = enabled;
         if (is_enabled) {
             tft_blit((uint16_t*) gfx_power, GFX_POWER_WIDTH, GFX_POWER_HEIGHT, ui_width-GFX_POWER_WIDTH, ui_height-GFX_POWER_HEIGHT);
+            tft_fill(0, 0, TFT_WIDTH, 2, RED);
+            tft_fill(0, TFT_HEIGHT - 2, TFT_WIDTH, 2, RED);
+            tft_fill(0, 0, 2, TFT_HEIGHT, RED);
+            tft_fill(TFT_WIDTH - 2, 0, 2, TFT_HEIGHT, RED);
         } else {
             tft_fill(ui_width-GFX_POWER_WIDTH, ui_height-GFX_POWER_HEIGHT, GFX_POWER_WIDTH, GFX_POWER_HEIGHT, bg_color);
+            tft_fill(0, 0, TFT_WIDTH, 2, bg_color);
+            tft_fill(0, TFT_HEIGHT - 2, TFT_WIDTH, 2, bg_color);
+            tft_fill(0, 0, 2, TFT_HEIGHT, bg_color);
+            tft_fill(TFT_WIDTH - 2, 0, 2, TFT_HEIGHT, bg_color);
         }
     }
 }

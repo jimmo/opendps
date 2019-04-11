@@ -94,11 +94,7 @@ static void number_got_event(ui_item_t *_item, event_t event)
             break;
         }
         case event_rot_press:
-            if (item->cur_digit == 0) {
-                item->cur_digit = item->num_digits + item->num_decimals - 1;
-            } else {
-                item->cur_digit--;
-            }
+            item->cur_digit = (item->cur_digit + 1) % (item->num_digits + item->num_decimals);
             _item->needs_redraw = true;
             break;
         default:
@@ -176,6 +172,7 @@ static uint32_t number_draw_width(ui_item_t *_item)
             break;
         case unit_volt:
         case unit_ampere:
+        case unit_watt:
             total_width += max_w;
             break;
         default:
@@ -317,6 +314,9 @@ static void number_draw(ui_item_t *_item)
         case unit_ampere:
             tft_putch(item->font_size, 'A', xpos, _item->y, max_w, h, color, false);
             break;
+        case unit_watt:
+            tft_putch(item->font_size, 'W', xpos, _item->y, max_w, h, color, false);
+            break;
         default:
             assert(0);
     }
@@ -334,6 +334,6 @@ void number_init(ui_number_t *item)
     item->ui.got_event = &number_got_event;
     item->ui.get_value = &number_get_value;
     item->ui.draw = &number_draw;
-    item->cur_digit = item->num_digits + item->num_decimals - 1; /** Most signinficant digit */
+    item->cur_digit = item->num_decimals - 1; /** The one after the dp */
     item->ui.needs_redraw = true;
 }

@@ -28,16 +28,17 @@ DEBUG ?= 0
 METER_FONT_FILE ?= gfx/Ubuntu-C.ttf
 METER_FONT_SMALL_SIZE ?= 18
 METER_FONT_MEDIUM_SIZE ?= 24
-METER_FONT_LARGE_SIZE ?= 48
+METER_FONT_LARGE_SIZE ?= 42
 FULL_FONT_FILE ?= gfx/ProggyClean.ttf
 FULL_FONT_SMALL_SIZE ?= 16
 
 # Color space for the DPS display. Most units use GBR but RGB has been spotted in the wild
-COLORSPACE ?= 0
+COLORSPACE ?= 1
 
 # Colors for the main UI elements -- see ili9163c.h for list of colors
-COLOR_VOLTAGE ?= WHITE
-COLOR_AMPERAGE ?= WHITE
+COLOR_VOLTAGE ?= GREEN
+COLOR_AMPERAGE ?= YELLOW
+COLOR_POWER ?= MAGENTA
 COLOR_INPUT ?= WHITE
 
 # Optional tinting for UI elements
@@ -61,6 +62,7 @@ CFLAGS += \
           -DCOLORSPACE=$(COLORSPACE) \
           -DCOLOR_VOLTAGE=$(COLOR_VOLTAGE) \
           -DCOLOR_AMPERAGE=$(COLOR_AMPERAGE) \
+          -DCOLOR_POWER=$(COLOR_POWER) \
           -DCOLOR_INPUT=$(COLOR_INPUT) \
           -D$(MODEL)
 
@@ -137,11 +139,11 @@ endif
 include ../libopencm3.target.mk
 
 fonts:
-	@python ./gen_lookup.py -l -o gfx_lookup
-	@python ./gen_lookup.py -f $(FULL_FONT_FILE) -s $(FULL_FONT_SMALL_SIZE) -o full_small -a
-	@python ./gen_lookup.py -f $(METER_FONT_FILE) -s $(METER_FONT_SMALL_SIZE) -o meter_small
-	@python ./gen_lookup.py -f $(METER_FONT_FILE) -s $(METER_FONT_MEDIUM_SIZE) -o meter_medium
-	@python ./gen_lookup.py -f $(METER_FONT_FILE) -s $(METER_FONT_LARGE_SIZE) -o meter_large
+	@python2 ./gen_lookup.py -l -o gfx_lookup
+	@python2 ./gen_lookup.py -f $(FULL_FONT_FILE) -s $(FULL_FONT_SMALL_SIZE) -o full_small -a
+	@python2 ./gen_lookup.py -f $(METER_FONT_FILE) -s $(METER_FONT_SMALL_SIZE) -o meter_small
+	@python2 ./gen_lookup.py -f $(METER_FONT_FILE) -s $(METER_FONT_MEDIUM_SIZE) -o meter_medium
+	@python2 ./gen_lookup.py -f $(METER_FONT_FILE) -s $(METER_FONT_LARGE_SIZE) -o meter_large
 
 test:
 	@make -C tests

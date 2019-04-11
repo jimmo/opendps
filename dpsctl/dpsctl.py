@@ -78,6 +78,9 @@ except ImportError:
 parameters = []
 
 
+def raw_input(s):
+    return input(s)
+
 class comm_interface(object):
     """
     An abstract class that describes a communication interface

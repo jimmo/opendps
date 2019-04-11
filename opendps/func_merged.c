@@ -62,10 +62,10 @@ static set_param_status_t get_parameter(char *name, char *value, uint32_t value_
 static int32_t saved_u, saved_i;
 
 enum {
-    CUR_GFX_NOT_DRAWN, 
+    CUR_GFX_NOT_DRAWN,
     CUR_GFX_CV,
     CUR_GFX_CC,
-} current_mode_gfx; 
+} current_mode_gfx;
 
 #define SCREEN_ID  (3)
 #define PAST_U     (0)
@@ -76,8 +76,8 @@ ui_number_t merged_voltage = {
     {
         .type = ui_item_number,
         .id = 10,
-        .x = 120,
-        .y = 15,
+        .x = 123,
+        .y = 3,
         .can_focus = true,
     },
     .font_size = FONT_METER_LARGE, /** The bigger one, try FONT_SMALL or FONT_MEDIUM for kicks */
@@ -99,8 +99,8 @@ ui_number_t merged_current = {
     {
         .type = ui_item_number,
         .id = 11,
-        .x = 120,
-        .y = 60,
+        .x = 123,
+        .y = 38,
         .can_focus = true,
     },
     .font_size = FONT_METER_LARGE,
@@ -111,10 +111,33 @@ ui_number_t merged_current = {
     .min = 0,
     .max = CONFIG_DPS_MAX_CURRENT,
     .si_prefix = si_milli,
-    .num_digits = 1,
-    .num_decimals = 3,
+    .num_digits = 2,
+    .num_decimals = 2,
     .unit = unit_ampere,
     .changed = &current_changed,
+};
+
+/* This is the definition of the current item in the UI */
+ui_number_t merged_power = {
+    {
+        .type = ui_item_number,
+        .id = 12,
+        .x = 123,
+        .y = 73,
+        .can_focus = false,
+    },
+    .font_size = FONT_METER_LARGE,
+    .alignment = ui_text_right_aligned,
+    .pad_dot = false,
+    .color = COLOR_POWER,
+    .value = 0,
+    .min = 0,
+    .max = 0,
+    .si_prefix = si_milli,
+    .num_digits = 2,
+    .num_decimals = 2,
+    .unit = unit_watt,
+    .changed = NULL,
 };
 
 /* This is the screen definition */
@@ -149,7 +172,7 @@ ui_screen_t merged_screen = {
             .name = {'\0'} /** Terminator */
         },
     },
-    .items = { (ui_item_t*) &merged_voltage, (ui_item_t*) &merged_current }
+    .items = { (ui_item_t*) &merged_voltage, (ui_item_t*) &merged_current, (ui_item_t*) &merged_power }
 };
 
 /**
@@ -231,12 +254,14 @@ static void merged_enable(bool enabled)
         merged_voltage.ui.draw(&merged_voltage.ui);
         merged_current.value = saved_i;
         merged_current.ui.draw(&merged_current.ui);
+        merged_power.value = saved_u * saved_i / 1000;
+        merged_power.ui.draw(&merged_power.ui);
 
         /** Ensure the CC or CV logo has been cleared from the screen */
         if (current_mode_gfx == CUR_GFX_CV) {
-            tft_fill(30, 128 - GFX_CV_HEIGHT, GFX_CV_WIDTH, GFX_CV_HEIGHT, BLACK);
+            tft_fill(30, 125 - GFX_CV_HEIGHT, GFX_CV_WIDTH, GFX_CV_HEIGHT, BLACK);
         } else if (current_mode_gfx == CUR_GFX_CC) {
-            tft_fill(30, 128 - GFX_CC_HEIGHT, GFX_CC_WIDTH, GFX_CC_HEIGHT, BLACK);
+            tft_fill(30, 125 - GFX_CC_HEIGHT, GFX_CC_WIDTH, GFX_CC_HEIGHT, BLACK);
         }
         current_mode_gfx = CUR_GFX_NOT_DRAWN;
     }
@@ -271,9 +296,9 @@ static void deactivated(void)
 {
     /** Ensure the CC or CV logo has been cleared from the screen */
     if (current_mode_gfx == CUR_GFX_CV) {
-        tft_fill(30, 128 - GFX_CV_HEIGHT, GFX_CV_WIDTH, GFX_CV_HEIGHT, BLACK);
+        tft_fill(30, 125 - GFX_CV_HEIGHT, GFX_CV_WIDTH, GFX_CV_HEIGHT, BLACK);
     } else if (current_mode_gfx == CUR_GFX_CC) {
-        tft_fill(30, 128 - GFX_CC_HEIGHT, GFX_CC_WIDTH, GFX_CC_HEIGHT, BLACK);
+        tft_fill(30, 125 - GFX_CC_HEIGHT, GFX_CC_WIDTH, GFX_CC_HEIGHT, BLACK);
     }
     current_mode_gfx = CUR_GFX_NOT_DRAWN;
 }
@@ -364,18 +389,21 @@ static void merged_tick(void)
             }
         }
 
+        merged_power.value = vout_actual * cout_actual / 1000;
+        merged_power.ui.draw(&merged_power.ui);
+
         /** Determine if we are in CV or CC mode and display it */
         int32_t vout_diff = abs(saved_u - vout_actual);
         int32_t cout_diff = abs(saved_i - cout_actual);
 
         if (cout_diff < vout_diff) {
             if (current_mode_gfx != CUR_GFX_CC) {
-                tft_blit((uint16_t*) gfx_cc, GFX_CC_WIDTH, GFX_CC_HEIGHT, 30, 128 - GFX_CC_HEIGHT);
+                tft_blit((uint16_t*) gfx_cc, GFX_CC_WIDTH, GFX_CC_HEIGHT, 30, 125 - GFX_CC_HEIGHT);
                 current_mode_gfx = CUR_GFX_CC;
             }
         } else {
             if (current_mode_gfx != CUR_GFX_CV) {
-                tft_blit((uint16_t*) gfx_cv, GFX_CV_WIDTH, GFX_CV_HEIGHT, 30, 128 - GFX_CV_HEIGHT);
+                tft_blit((uint16_t*) gfx_cv, GFX_CV_WIDTH, GFX_CV_HEIGHT, 30, 125 - GFX_CV_HEIGHT);
                 current_mode_gfx = CUR_GFX_CV;
             }
         }
@@ -391,15 +419,14 @@ void func_merged_init(uui_t *ui)
 {
     merged_voltage.value = 0; /** read from past */
     merged_current.value = 0; /** read from past */
+    merged_power.value = 0;
     uint16_t i_out_raw, v_in_raw, v_out_raw;
     hw_get_adc_values(&i_out_raw, &v_in_raw, &v_out_raw);
     (void) i_out_raw;
     (void) v_out_raw;
     merged_voltage.max = pwrctl_calc_vin(v_in_raw); /** @todo: subtract for LDO */
     number_init(&merged_voltage); /** @todo: add guards for missing init calls */
-    /** Start at the second most significant digit preventing the user from
-        accidentally cranking up the setting 10V or more */
-    merged_voltage.cur_digit = 2;
     number_init(&merged_current);
+    number_init(&merged_power);
     uui_add_screen(ui, &merged_screen);
 }
